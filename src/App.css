@@ -3,13 +3,12 @@
   padding: 0;
 }
 
-.container {
-  background-color: #f46060;
+#root {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  width: 100vh;
+  justify-content: space-around;
+  background-color: #f46060;
+  width: 100%;
   height: 100vh;
 }
 
@@ -48,8 +47,7 @@
 
 #girl {
   position: absolute;
-  top: 156px;
-  left: 155px;
+  z-index: 0;
 }
 
 .menu {
@@ -65,3 +63,23 @@
   background-color: blueviolet;
   display: none;
 }
+
+.menu , .menu>div:last-child{
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+
+}
+.menu{
+  padding: 10px;
+  border-radius: 10px;
+  background-color: black ;
+}
+.menu>div>button, .menu>div>select{
+  width: 300px;
+  font-size: 24px;
+  background-color: #f46060;
+  border: solid 2px black;
+  cursor: pointer;
+
+} 

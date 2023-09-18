@@ -2,25 +2,50 @@ import './App.css';
 import { useState, useEffect } from 'react';
 import men from "./assets/images/men.png";
 import girl from "./assets/images/girl.png"
-
+import Menu from "./Menu.js"
 function App() {
-  const level = [
+  const level1 = [
     [1, 0, 1, 0],
     [1, 1, 1, 1],
     [1, 0, 1, 0],
-    [1, 0, 1, 1]
+    [1, 0, 1, 1],
+  ]
+  const level2 = [
+    [1, 1, 1, 1, 1, 1],
+    [1, 0, 1, 0, 1, 1],
+    [1, 0, 1, 0, 1, 0],
+    [1, 0, 1, 1, 1, 1],
+    [1, 1, 0, 0, 0, 1],
+    [1, 1, 1, 0, 1, 1]
   ];
 
+
+  const [level, setLevel] = useState(level1)
+  const [currentGirl, setCurrentGirl] = useState({ x: 3, y: 3 })
   const [currentPosition, setCurrentPosition] = useState({ x: 0, y: 0 });
-  const [path, setPath] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [getPath, setGetPath] = useState(new Set());
+
+  const getLevel = (value) => {
+    value = parseInt(value);//đưa value về kiểu số. 
+    if (value === 2) {
+      setLevel(level2)
+      setCurrentGirl({ x: 4, y: 5 })
+    } else {
+      setLevel(level1)
+      setCurrentGirl({ x: 3, y: 3 })
+    }
+  }
 
   const handleCellClick = (x, y) => {
+    // Kiểm tra xem mỗi bước đi là 1 ô hay không.
     const isAdjacent = Math.abs(x - currentPosition.x) + Math.abs(y - currentPosition.y) === 1;
 
     if (isAdjacent) {
       setCurrentPosition({ x, y });
     }
-  };
+    currentGirl === currentPosition ? setIsSearching(true) : setIsSearching(false)
+  };//chưa sử lý useFffect
 
   const menStyle = (currentPosition) => {
     return {
@@ -28,106 +53,78 @@ function App() {
       top: currentPosition.y * 51 + "px"
     };
   };
+  // Hàm kiẻm tra có phải tường hay không
+  const isWall = (x, y) => {
+    return level[y][x] === 0;
+  };
 
-  const search = (level, startMen, endMen, type) => {
-    const queueOrStack = [startMen];
+  // Hàm kiểm tra xem một ô có phải là đích hay không
+  const isGoal = (x, y) => {
+    return x === currentGirl.x && y === currentGirl.y;
+  };
+
+  // Hàm lấy tọa độ, kiểm tra của các ô lân cận
+  const getNeighbors = (x, y, visited) => {
+    const neighbors = [
+      { x: x - 1, y },
+      { x: x + 1, y },
+      { x, y: y - 1 },
+      { x, y: y + 1 }
+    ];
+    return neighbors.filter(neighbor => {
+      return (
+        neighbor.x >= 0 &&
+        neighbor.x < level[0].length &&
+        neighbor.y >= 0 &&
+        neighbor.y < level.length &&
+        !isWall(neighbor.x, neighbor.y) &&
+        !visited.has(neighbor.x + "-" + neighbor.y)
+      );
+    });
+  };
+
+  const search = (type) => {
+    const queueOrStack = [currentPosition];//Khởi tạo giá trị ban đầu 
     const visited = new Set();
-    const newVisitedPositions = [...path];
-    let dem = 1;
+
     while (queueOrStack.length > 0) {
       const currentPosMen = type === "DFS" ? queueOrStack.shift() : queueOrStack.pop();
-      if (
-        currentPosMen.x >= 0 &&
-        currentPosMen.x < level[0].length &&
-        currentPosMen.y >= 0 &&
-        currentPosMen.y < level.length &&
-        level[currentPosMen.y][currentPosMen.x] === 1 &&
-        !visited.has(currentPosMen.x + "-" + currentPosMen.y)
-      ) {
-        newVisitedPositions.push(currentPosMen);
-        console.log(dem++)
-        console.log(currentPosMen ) 
-        if (currentPosMen.x === endMen.x && currentPosMen.y === endMen.y) {
-          setPath(newVisitedPositions);
-          console.log("TÌM THẤY ĐƯỜNG ĐẾN ĐÍCH");
-          return true;
-        }
-
-        visited.add(currentPosMen.x + "-" + currentPosMen.y);
-
-        const neighbors = [
-          { x: currentPosMen.x - 1, y: currentPosMen.y },
-          { x: currentPosMen.x + 1, y: currentPosMen.y },
-          { x: currentPosMen.x, y: currentPosMen.y - 1 },
-          { x: currentPosMen.x, y: currentPosMen.y + 1 }
-        ];
-
-        for (const neighbor of neighbors) {
-          queueOrStack.push(neighbor);
-        }
+      getPath.add(currentPosMen)//Lưu lại đường đi
+      if (isGoal(currentPosMen.x, currentPosMen.y)) {
+        console.log(getPath)
+        return true;
       }
-    }
 
-    console.log("KHÔNG TÌM THẤY ĐƯỜNG ĐẾN ĐÍCH");
+      visited.add(currentPosMen.x + "-" + currentPosMen.y);
+      
+      const neighbors = getNeighbors(currentPosMen.x, currentPosMen.y, visited)
+      for (const neighbor of neighbors) {
+        queueOrStack.push(neighbor);
+      };
+    }
     return false;
   };
-  // const IDS = (level, start, end, maxDepth) => {
-  //   search(level, currentPosition, { x: 3, y: 3 }, "DFS");
-  //   for (let depth = 0; depth < maxDepth; depth++) {
-  //     if (dfs(start, 0)) {
-  //       return true;
-  //     }
-  //   }
-  
-  //   return false;
-  // };
-  
+
   useEffect(() => {
     let index = 0;
     const timer = setInterval(() => {
-      if (index < path.length) {
-        setCurrentPosition(path[index]);
+      const pathArray = [...getPath];
+      if (index < pathArray.length) {
+        setCurrentPosition(pathArray[index]);
         index++;
       } else {
         clearInterval(timer);
+        setGetPath(new Set()); // Đặt lại đối tượng Set sau khi đã sử dụng
       }
-    }, 500); 
-  }, [path]);
-
-  const Menu = () => {
+    }, 500);
+  }, [getPath]);
+  const Result = () => {
     return (
-      <div className="menu">
-        <button
-          className="breadthSearch"
-          type="text"
-          onClick={() => { 
-            search(level, currentPosition, { x: 3, y: 3 }, "BFS");
-          }}
-        >
-          Tìm Kiếm Theo Chiều Rộng BFS
-        </button>
-        <button
-          className="breadthSearch"
-          type="text"
-          onClick={() => { 
-            search(level, currentPosition, { x: 3, y: 3 }, "DFS");
-          }}
-        >
-          Tìm Kiếm Theo Chiều Sâu DFS
-        </button>
-        <button
-          className="breadthSearch"
-          type="text"
-          onClick={() => { 
-            search(level, currentPosition, { x: 3, y: 3 }, "DFS");
-          }}
-        >
-                Tìm Kiếm Sâu Dần IDS
-            </button>
+      <div>
+        {isSearching ? <p>Tìm kiếm hoàn thành!</p> : <p>Đang tìm!</p>}
       </div>
-    );
+    )
   }
-
   return (
     <>
       <div className="table">
@@ -160,9 +157,14 @@ function App() {
           alt="icon"
           width="50px"
           height="50px"
+          style={menStyle(currentGirl)}
         />
       </div>
-      <Menu />
+      <Menu
+        onSearch={search}
+        setCurrentPosition={setCurrentPosition}
+        getLevel={getLevel}
+      />
     </>
   );
 }
